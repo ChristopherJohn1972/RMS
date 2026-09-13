@@ -27,3 +27,15 @@ Frontend/dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Unwanted dirs
+TENANT FRONTEND/
+property-management-software/
+
+# Old files
+*.mwb
+*.sql
+*.ps1
+build cmd.txt
+deploy.sh
+cleanup.ps1
