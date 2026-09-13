@@ -39,3 +39,4 @@ property-management-software/
 build cmd.txt
 deploy.sh
 cleanup.ps1
+ServiceAccountKey.json
