@@ -1,0 +1,5 @@
+cd C:\Users\MUTUKU\mu_code\RMS\Backend
+"C:\Users\MUTUKU\AppData\Local\Programs\Python\Python313\python.exe" manage.py runserver 8000
+
+cd C:\Users\MUTUKU\mu_code\RMS\Frontend
+npm run dev

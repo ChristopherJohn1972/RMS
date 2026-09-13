@@ -1,0 +1,29 @@
+# Dependencies
+Backend/venv/
+Frontend/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.sqlite3
+db.sqlite3
+
+# Environment
+.env
+.env.local
+
+# Build
+Backend/staticfiles/
+Frontend/dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

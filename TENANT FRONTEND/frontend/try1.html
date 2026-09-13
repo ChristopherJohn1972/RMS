@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #2ecc71;
+            --primary-dark: #27ae60;
+            --primary-light: #d5f4e6;
+            --secondary-color: #34495e;
+            --text-color: #2c3e50;
+            --light-bg: #f8f9fa;
+            --white: #ffffff;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7f9;
+            color: var(--text-color);
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            background-color: var(--secondary-color);
+            color: white;
+            min-height: calc(100vh - 76px);
+            padding: 0;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 15px 20px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .main-content {
+            padding: 20px;
+            background-color: var(--light-bg);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: var(--white);
+            border-bottom: 2px solid var(--primary-light);
+            font-weight: 600;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .stat-card i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+        
+        .stat-card .label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .badge-success {
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
+        }
+        
+        .lease-progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .maintenance-image {
+            height: 60px;
+            width: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .payment-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .section-title {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 10px;
+            margin: 20px 0;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(46, 204, 113, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-home me-2"></i>Tenant Dashboard</h1>
+                </div>
+                <div class="col-md-6 d-flex justify-content-end align-items-center">
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                            <li><a class="dropdown-item" href="#">Rent due in 3 days</a></li>
+                            <li><a class="dropdown-item" href="#">Maintenance request approved</a></li>
+                            <li><a class="dropdown-item" href="#">New message from landlord</a></li>
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i> <span id="userName">Guest User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <nav class="nav flex-column pt-3">
+                    <a class="nav-link active" href="#"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#leaseModal"><i class="fas fa-file-contract"></i> Lease Details</a>
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="fas fa-credit-card"></i> Rent & Payments</a>
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#maintenanceModal"><i class="fas fa-tools"></i> Maintenance</a>
+                    <a class="nav-link" href="#"><i class="fas fa-download"></i> Documents</a>
+                    <a class="nav-link" href="#"><i class="fas fa-history"></i> Payment History</a>
+                    <a class="nav-link" href="#"><i class="fas fa-cog"></i> Settings</a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <!-- Dashboard Overview -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <div class="number" id="rentDue">$0</div>
+                            <div class="label">Rent Due</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <i class="fas fa-calendar-check"></i>
+                            <div class="number" id="daysUntilDue">0</div>
+                            <div class="label">Days Until Due</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <i class="fas fa-tools"></i>
+                            <div class="number" id="activeRequests">0</div>
+                            <div class="label">Active Requests</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <i class="fas fa-file-invoice"></i>
+                            <div class="number" id="paymentHistory">0</div>
+                            <div class="label">Payment History</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Lease and Payment Section -->
+                <div class="row mt-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Current Lease Details</span>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#leaseModal">View/Edit Details</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <p><strong>Property:</strong> <span id="propertyName">Not specified</span></p>
+                                        <p><strong>Address:</strong> <span id="propertyAddress">Not specified</span></p>
+                                        <p><strong>Lease Duration:</strong> <span id="leaseDuration">Not specified</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Monthly Rent:</strong> $<span id="monthlyRent">0</span></p>
+                                        <p><strong>Payment Due:</strong> <span id="paymentDueDay">1st</span> of each month</p>
+                                        <p><strong>Status:</strong> <span class="badge bg-success" id="leaseStatus">Not specified</span></p>
+                                    </div>
+                                </div>
+                                <div class="progress lease-progress mb-2">
+                                    <div class="progress-bar bg-success" id="leaseProgress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <p class="text-muted text-center" id="leaseProgressText">0% of lease completed</p>
+                            </div>
+                        </div>
+
+                        <!-- Maintenance Requests -->
+                        <div class="card mt-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Recent Maintenance Requests</span>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#maintenanceModal"><i class="fas fa-plus me-1"></i> New Request</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Issue</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="maintenanceTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center">No maintenance requests yet</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <!-- Rent Payment Section -->
+                        <div class="card">
+                            <div class="card-header">
+                                Rent Payment
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5>Balance Due: <span id="balanceDue">$0</span></h5>
+                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#paymentModal">Pay Now</button>
+                                </div>
+                                <p class="text-muted">Next payment due in <span id="nextPaymentDays">0</span> days</p>
+                                <div class="mt-4">
+                                    <h6>Payment Methods</h6>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <span class="badge bg-light text-dark p-2"><i class="fab fa-cc-stripe me-1"></i> Stripe</span>
+                                        <span class="badge bg-light text-dark p-2"><i class="fab fa-paypal me-1"></i> PayPal</span>
+                                        <span class="badge bg-light text-dark p-2"><i class="fas fa-mobile-alt me-1"></i> Mpesa</span>
+                                        <span class="badge bg-light text-dark p-2"><i class="fas fa-money-bill-wave me-1"></i> Flutterwave</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment History -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                Recent Payments
+                            </div>
+                            <div class="card-body payment-history">
+                                <ul class="list-group list-group-flush" id="paymentHistoryList">
+                                    <li class="list-group-item">No payment history available</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel">Tenant Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fullName" class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="fullName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="apartment" class="form-label">Apartment Name</label>
+                                    <input type="text" class="form-control" id="apartment" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="houseNumber" class="form-label">House/Apartment Number</label>
+                                    <input type="text" class="form-control" id="houseNumber" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="moveInDate" class="form-label">Move-in Date</label>
+                                    <input type="date" class="form-control" id="moveInDate" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Full Address</label>
+                            <textarea class="form-control" id="address" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveProfile">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lease Details Modal -->
+    <div class="modal fade" id="leaseModal" tabindex="-1" aria-labelledby="leaseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="leaseModalLabel">Lease Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="leaseForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="leaseStart" class="form-label">Lease Start Date</label>
+                                    <input type="date" class="form-control" id="leaseStart" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="leaseEnd" class="form-label">Lease End Date</label>
+                                    <input type="date" class="form-control" id="leaseEnd" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="rentAmount" class="form-label">Monthly Rent Amount ($)</label>
+                                    <input type="number" class="form-control" id="rentAmount" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="dueDay" class="form-label">Rent Due Day of Month</label>
+                                    <input type="number" class="form-control" id="dueDay" min="1" max="31" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="leaseDocument" class="form-label">Upload Lease Agreement (PDF)</label>
+                            <input class="form-control" type="file" id="leaseDocument" accept=".pdf">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveLease">Save Lease Details</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentModalLabel">Make a Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="paymentForm">
+                        <div class="mb-3">
+                            <label for="paymentAmount" class="form-label">Amount to Pay ($)</label>
+                            <input type="number" class="form-control" id="paymentAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentMethod" class="form-label">Payment Method</label>
+                            <select class="form-select" id="paymentMethod" required>
+                                <option value="">Select a payment method</option>
+                                <option value="stripe">Stripe</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="mpesa">Mpesa</option>
+                                <option value="flutterwave">Flutterwave</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardNumber" class="form-label">Card Number</label>
+                            <input type="text" class="form-control" id="cardNumber" placeholder="XXXX XXXX XXXX">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="expiryDate" class="form-label">Expiry Date</label>
+                                    <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cvv" placeholder="XXX">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="processPayment">Process Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Modal -->
+    <div class="modal fade" id="maintenanceModal" tabindex="-1" aria-labelledby="maintenanceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="maintenanceModalLabel">Submit Maintenance Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="maintenanceForm">
+                        <div class="mb-3">
+                            <label for="issueType" class="form-label">Issue Type</label>
+                            <select class="form-select" id="issueType" required>
+                                <option value="">Select issue type</option>
+                                <option value="plumbing">Plumbing</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="appliance">Appliance</option>
+                                <option value="heating">Heating/Cooling</option>
+                                <option value="structural">Structural</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="issueDescription" class="form-label">Issue Description</label>
+                            <textarea class="form-control" id="issueDescription" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="issuePhoto" class="form-label">Upload Photo (Optional)</label>
+                            <input class="form-control" type="file" id="issuePhoto" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="urgency" class="form-label">Urgency</label>
+                            <select class="form-select" id="urgency" required>
+                                <option value="low">Low - Not urgent</option>
+                                <option value="medium" selected>Medium - Needs attention soon</option>
+                                <option value="high">High - Requires immediate attention</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactPreference" class="form-label">Contact Preference</label>
+                            <select class="form-select" id="contactPreference" required>
+                                <option value="phone">Phone Call</option>
+                                <option value="text">Text Message</option>
+                                <option value="email">Email</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitMaintenance">Submit Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "rental-management-system-d7106.firebaseapp.com",
+            databaseURL: "https://rental-management-system-d7106-default-rtdb.firebaseio.com",
+            projectId: "rental-management-system-d7106",
+            storageBucket: "rental-management-system-d7106.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        // DOM Elements
+        const userName = document.getElementById('userName');
+        const rentDue = document.getElementById('rentDue');
+        const daysUntilDue = document.getElementById('daysUntilDue');
+        const activeRequests = document.getElementById('activeRequests');
+        const paymentHistory = document.getElementById('paymentHistory');
+        const propertyName = document.getElementById('propertyName');
+        const propertyAddress = document.getElementById('propertyAddress');
+        const leaseDuration = document.getElementById('leaseDuration');
+        const monthlyRent = document.getElementById('monthlyRent');
+        const paymentDueDay = document.getElementById('paymentDueDay');
+        const leaseStatus = document.getElementById('leaseStatus');
+        const leaseProgress = document.getElementById('leaseProgress');
+        const leaseProgressText = document.getElementById('leaseProgressText');
+        const balanceDue = document.getElementById('balanceDue');
+        const nextPaymentDays = document.getElementById('nextPaymentDays');
+        const maintenanceTableBody = document.getElementById('maintenanceTableBody');
+        const paymentHistoryList = document.getElementById('paymentHistoryList');
+
+        // Form Elements
+        const saveProfileBtn = document.getElementById('saveProfile');
+        const saveLeaseBtn = document.getElementById('saveLease');
+        const processPaymentBtn = document.getElementById('processPayment');
+        const submitMaintenanceBtn = document.getElementById('submitMaintenance');
+
+        // Sample data (in a real app, this would come from Firebase)
+        let userData = {
+            name: "Guest User",
+            email: "",
+            phone: "",
+            apartment: "",
+            houseNumber: "",
+            moveInDate: "",
+            address: ""
+        };
+
+        let leaseData = {
+            startDate: "",
+            endDate: "",
+            rentAmount: 0,
+            dueDay: 1
+        };
+
+        let paymentData = {
+            balance: 0,
+            history: []
+        };
+
+        let maintenanceData = [];
+
+        // Initialize the dashboard
+        function initDashboard() {
+            // In a real application, we would fetch this data from Firebase
+            // For demonstration, we'll use sample data
+            loadSampleData();
+            updateDashboard();
+        }
+
+        // Load sample data for demonstration
+        function loadSampleData() {
+            // Set current date for calculations
+            const currentDate = new Date();
+            
+            // Sample user data
+            userData = {
+                name: "John Doe",
+                email: "john.doe@example.com",
+                phone: "+1 (555) 123-4567",
+                apartment: "Sunshine Apartments",
+                houseNumber: "304",
+                moveInDate: "2023-01-01",
+                address: "123 Main Street, San Francisco, CA 94101"
+            };
+            
+            // Sample lease data
+            const startDate = new Date(2023, 0, 1); // Jan 1, 2023
+            const endDate = new Date(2023, 11, 31); // Dec 31, 2023
+            
+            leaseData = {
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0],
+                rentAmount: 1500,
+                dueDay: 1
+            };
+            
+            // Sample payment data
+            paymentData = {
+                balance: 1500,
+                history: [
+                    { date: "2023-08-01", amount: 1500, method: "Stripe" },
+                    { date: "2023-07-01", amount: 1500, method: "PayPal" },
+                    { date: "2023-06-01", amount: 1500, method: "Stripe" }
+                ]
+            };
+            
+            // Sample maintenance data
+            maintenanceData = [
+                { date: "2023-08-15", issue: "Leaking faucet in kitchen", status: "Completed" },
+                { date: "2023-09-05", issue: "AC not cooling properly", status: "In Progress" }
+            ];
+        }
+
+        // Update dashboard with current data
+        function updateDashboard() {
+            // Update user info
+            userName.textContent = userData.name;
+            document.getElementById('fullName').value = userData.name;
+            document.getElementById('email').value = userData.email;
+            document.getElementById('phone').value = userData.phone;
+            document.getElementById('apartment').value = userData.apartment;
+            document.getElementById('houseNumber').value = userData.houseNumber;
+            document.getElementById('moveInDate').value = userData.moveInDate;
+            document.getElementById('address').value = userData.address;
+            
+            // Update lease info
+            document.getElementById('leaseStart').value = leaseData.startDate;
+            document.getElementById('leaseEnd').value = leaseData.endDate;
+            document.getElementById('rentAmount').value = leaseData.rentAmount;
+            document.getElementById('dueDay').value = leaseData.dueDay;
+            
+            // Calculate lease progress
+            const startDate = new Date(leaseData.startDate);
+            const endDate = new Date(leaseData.endDate);
+            const currentDate = new Date();
+            
+            const totalLeaseTime = endDate - startDate;
+            const elapsedLeaseTime = currentDate - startDate;
+            const progressPercent = Math.min(100, Math.max(0, (elapsedLeaseTime / totalLeaseTime) * 100));
+            
+            leaseProgress.style.width = `${progressPercent}%`;
+            leaseProgressText.textContent = `${progressPercent.toFixed(1)}% of lease completed`;
+            
+            // Update displayed lease info
+            propertyName.textContent = userData.apartment;
+            propertyAddress.textContent = userData.address;
+            leaseDuration.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+            monthlyRent.textContent = leaseData.rentAmount;
+            paymentDueDay.textContent = getOrdinalNum(leaseData.dueDay);
+            
+            // Update payment info
+            rentDue.textContent = `$${paymentData.balance}`;
+            balanceDue.textContent = `$${paymentData.balance}`;
+            
+            // Calculate days until next payment
+            const today = new Date();
+            let nextPaymentDate = new Date(today.getFullYear(), today.getMonth(), leaseData.dueDay);
+            
+            if (nextPaymentDate < today) {
+                nextPaymentDate = new Date(today.getFullYear(), today.getMonth() + 1, leaseData.dueDay);
+            }
+            
+            const daysUntilPayment = Math.ceil((nextPaymentDate - today) / (1000 * 60 * 60 * 24));
+            daysUntilDue.textContent = daysUntilPayment;
+            nextPaymentDays.textContent = daysUntilPayment;
+            
+            // Update payment history count
+            paymentHistory.textContent = paymentData.history.length;
+            
+            // Update maintenance requests
+            activeRequests.textContent = maintenanceData.length;
+            updateMaintenanceTable();
+            
+            // Update payment history list
+            updatePaymentHistoryList();
+        }
+
+        // Format date to readable string
+        function formatDate(date) {
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // Get ordinal number (1st, 2nd, 3rd, etc.)
+        function getOrdinalNum(n) {
+            return n + (n > 0 ? ['th', 'st', 'nd', 'rd'][(n > 3 && n < 21) || n % 10 > 3 ? 0 : n % 10] : '');
+        }
+
+        // Update maintenance table with current data
+        function updateMaintenanceTable() {
+            if (maintenanceData.length === 0) {
+                maintenanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No maintenance requests yet</td></tr>';
+                return;
+            }
+            
+            let tableHTML = '';
+            maintenanceData.forEach(request => {
+                let statusClass = 'warning';
+                if (request.status === 'Completed') statusClass = 'success';
+                if (request.status === 'Rejected') statusClass = 'danger';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${request.date}</td>
+                        <td>${request.issue}</td>
+                        <td><span class="badge bg-${statusClass}">${request.status}</span></td>
+                        <td><button class="btn btn-sm btn-outline-primary">View</button></td>
+                    </tr>
+                `;
+            });
+            
+            maintenanceTableBody.innerHTML = tableHTML;
+        }
+
+        // Update payment history list
+        function updatePaymentHistoryList() {
+            if (paymentData.history.length === 0) {
+                paymentHistoryList.innerHTML = '<li class="list-group-item">No payment history available</li>';
+                return;
+            }
+            
+            let listHTML = '';
+            paymentData.history.forEach(payment => {
+                listHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Payment - ${payment.method}</h6>
+                            <small class="text-muted">${payment.date}</small>
+                        </div>
+                        <span class="text-success">$${payment.amount}</span>
+                    </li>
+                `;
+            });
+            
+            paymentHistoryList.innerHTML = listHTML;
+        }
+
+        // Event Listeners
+        saveProfileBtn.addEventListener('click', function() {
+            // Get form values
+            userData.name = document.getElementById('fullName').value;
+            userData.email = document.getElementById('email').value;
+            userData.phone = document.getElementById('phone').value;
+            userData.apartment = document.getElementById('apartment').value;
+            userData.houseNumber = document.getElementById('houseNumber').value;
+            userData.moveInDate = document.getElementById('moveInDate').value;
+            userData.address = document.getElementById('address').value;
+            
+            // In a real app, save to Firebase
+            // For now, just update the UI
+            userName.textContent = userData.name;
+            propertyName.textContent = userData.apartment;
+            propertyAddress.textContent = userData.address;
+            
+            // Show success message
+            alert('Profile updated successfully!');
+            
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+        });
+
+        saveLeaseBtn.addEventListener('click', function() {
+            // Get form values
+            leaseData.startDate = document.getElementById('leaseStart').value;
+            leaseData.endDate = document.getElementById('leaseEnd').value;
+            leaseData.rentAmount = parseFloat(document.getElementById('rentAmount').value);
+            leaseData.dueDay = parseInt(document.getElementById('dueDay').value);
+            
+            // Handle file upload (in a real app)
+            const file = document.getElementById('leaseDocument').files[0];
+            if (file) {
+                console.log('Lease document uploaded:', file.name);
+                // In a real app, upload to Firebase Storage
+            }
+            
+            // Update the UI
+            const startDate = new Date(leaseData.startDate);
+            const endDate = new Date(leaseData.endDate);
+            leaseDuration.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+            monthlyRent.textContent = leaseData.rentAmount;
+            paymentDueDay.textContent = getOrdinalNum(leaseData.dueDay);
+            
+            // Recalculate lease progress
+            const currentDate = new Date();
+            const totalLeaseTime = endDate - startDate;
+            const elapsedLeaseTime = currentDate - startDate;
+            const progressPercent = Math.min(100, Math.max(0, (elapsedLeaseTime / totalLeaseTime) * 100));
+            
+            leaseProgress.style.width = `${progressPercent}%`;
+            leaseProgressText.textContent = `${progressPercent.toFixed(1)}% of lease completed`;
+            
+            // Show success message
+            alert('Lease details updated successfully!');
+            
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('leaseModal')).hide();
+        });
+
+        processPaymentBtn.addEventListener('click', function() {
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const method = document.getElementById('paymentMethod').value;
+            
+            if (!amount || amount <= 0 || !method) {
+                alert('Please enter a valid amount and select a payment method.');
+                return;
+            }
+            
+            // Process payment (in a real app, this would interface with payment gateway)
+            console.log(`Processing payment of $${amount} via ${method}`);
+            
+            // Update payment data
+            const currentDate = new Date();
+            paymentData.balance = Math.max(0, paymentData.balance - amount);
+            paymentData.history.unshift({
+                date: currentDate.toISOString().split('T')[0],
+                amount: amount,
+                method: method.charAt(0).toUpperCase() + method.slice(1)
+            });
+            
+            // Update UI
+            rentDue.textContent = `$${paymentData.balance}`;
+            balanceDue.textContent = `$${paymentData.balance}`;
+            paymentHistory.textContent = paymentData.history.length;
+            updatePaymentHistoryList();
+            
+            // Show success message
+            alert(`Payment of $${amount} processed successfully!`);
+            
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+        });
+
+        submitMaintenanceBtn.addEventListener('click', function() {
+            const issueType = document.getElementById('issueType').value;
+            const description = document.getElementById('issueDescription').value;
+            const urgency = document.getElementById('urgency').value;
+            
+            if (!issueType || !description) {
+                alert('Please select an issue type and provide a description.');
+                return;
+            }
+            
+            // Handle file upload (in a real app)
+            const file = document.getElementById('issuePhoto').files[0];
+            if (file) {
+                console.log('Maintenance photo uploaded:', file.name);
+                // In a real app, upload to Firebase Storage
+            }
+            
+            // Add maintenance request
+            const currentDate = new Date();
+            maintenanceData.unshift({
+                date: currentDate.toISOString().split('T')[0],
+                issue: `${issueType}: ${description}`,
+                status: 'Submitted'
+            });
+            
+            // Update UI
+            activeRequests.textContent = maintenanceData.length;
+            updateMaintenanceTable();
+            
+            // Show success message
+            alert('Maintenance request submitted successfully!');
+            
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('maintenanceModal')).hide();
+        });
+
+        // Initialize the dashboard when the page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
