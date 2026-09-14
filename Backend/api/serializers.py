@@ -4,7 +4,7 @@ from rest_framework import serializers
 from .models import (
     User, Property, PropertyAmenity, Unit, UnitAmenity,
     Lease, MaintenanceRequest, Payment, Notification,
-    Conversation, Message,
+    Conversation, Message, Document,
 )
 
 
@@ -270,3 +270,18 @@ class ConversationSerializer(serializers.ModelSerializer):
     def get_unread_count(self, obj):
         request_user_id = self.context.get('request_user_id')
         return obj.messages.filter(is_read=False).exclude(sender_id=request_user_id).count()
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+    uploader_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = ['id', 'name', 'file', 'file_type', 'file_size', 'category',
+                  'uploaded_by', 'uploader_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'uploaded_by', 'created_at', 'updated_at']
+
+    def get_uploader_name(self, obj):
+        if obj.uploaded_by:
+            return f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}"
+        return ''

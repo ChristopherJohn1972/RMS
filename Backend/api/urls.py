@@ -11,6 +11,7 @@ router.register(r'v1/payments', views.PaymentViewSet, basename='payment')
 router.register(r'v1/leases', views.LeaseViewSet, basename='lease')
 router.register(r'v1/notifications', views.NotificationViewSet, basename='notification')
 router.register(r'v1/users', views.UserViewSet, basename='user')
+router.register(r'v1/documents', views.DocumentViewSet, basename='document')
 
 urlpatterns = [
     # Health & info

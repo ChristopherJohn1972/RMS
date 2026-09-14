@@ -243,6 +243,33 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
 
+class Document(models.Model):
+    CATEGORY_CHOICES = [
+        ('lease', 'Lease Agreement'),
+        ('receipt', 'Receipt'),
+        ('contract', 'Contract'),
+        ('id', 'ID Upload'),
+        ('other', 'Other'),
+    ]
+
+    id = models.CharField(max_length=128, primary_key=True)
+    name = models.CharField(max_length=255)
+    file = models.FileField(upload_to='documents/%Y/%m/')
+    file_type = models.CharField(max_length=128, blank=True, default='')
+    file_size = models.BigIntegerField(default=0)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='other')
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='documents')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'documents'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+
 class Conversation(models.Model):
     id = models.CharField(max_length=128, primary_key=True)
     participants = models.ManyToManyField(User, related_name='conversations')

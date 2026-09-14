@@ -30,9 +30,14 @@ const DocumentsPage = () => {
     formData.append('name', file.name);
     try {
       await api.documents.upload(formData);
-      toast.success('Document uploaded');
+      toast.success('Document uploaded successfully');
       loadDocuments();
-    } catch { toast.error('Upload failed'); } finally { setUploading(false); e.target.value = ''; }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Unable to upload document. Please try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const handleDelete = async (id) => {
@@ -41,14 +46,19 @@ const DocumentsPage = () => {
       await api.documents.delete(id);
       toast.success('Document deleted');
       loadDocuments();
-    } catch { toast.error('Delete failed'); }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Unable to delete document. Please try again.');
+    }
   };
 
   const handleDownload = async (doc) => {
     try {
-      await api.documents.download(doc.id);
+      const url = api.documents.download(doc.id);
+      window.open(url, '_blank');
       toast.success(`Downloading ${doc.name}`);
-    } catch { toast.error('Download failed'); }
+    } catch (err) {
+      toast.error('Unable to download document. Please try again.');
+    }
   };
 
   const getFileIcon = (type) => {

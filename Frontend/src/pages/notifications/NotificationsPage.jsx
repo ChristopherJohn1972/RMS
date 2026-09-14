@@ -105,10 +105,12 @@ const NotificationsPage = () => {
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
             <CheckCheck className="w-4 h-4" /> Mark All Read
           </button>
-          <button onClick={() => setShowSendModal(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
-            <Send className="w-4 h-4" /> Send Notification
-          </button>
+          {user?.role !== 'tenant' && (
+            <button onClick={() => setShowSendModal(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
+              <Send className="w-4 h-4" /> Send Notification
+            </button>
+          )}
         </div>
       </div>
 
@@ -209,7 +211,7 @@ const NotificationsPage = () => {
       )}
 
       {/* Send Modal */}
-      {showSendModal && (
+      {showSendModal && user?.role !== 'tenant' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50" onClick={() => setShowSendModal(false)} />
           <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-lg p-6">

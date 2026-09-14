@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from .models import (
     User, Property, PropertyAmenity, Unit, UnitAmenity,
     Lease, MaintenanceRequest, Payment, Notification,
-    Conversation, Message,
+    Conversation, Message, Document,
 )
 from .serializers import (
     UserSerializer, UserCreateSerializer,
@@ -24,7 +24,7 @@ from .serializers import (
     LeaseSerializer, MaintenanceRequestSerializer,
     PaymentSerializer, NotificationSerializer,
     UserDashboardSerializer, StaffDashboardSerializer, AdminDashboardSerializer,
-    ConversationSerializer, MessageSerializer,
+    ConversationSerializer, MessageSerializer, DocumentSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -557,6 +557,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def send(self, request):
+        user = _resolve_user_from_request(request)
+        if not user or user.role == 'tenant':
+            return Response({"detail": "Only admin and staff can send notifications"}, status=403)
         notif_type = request.data.get('type', 'email')
         subject = request.data.get('subject', '')
         message = request.data.get('message', '')
@@ -703,6 +706,54 @@ class FinancialReportsView(APIView):
             'expense_ratio': expense_ratio,
         }
         return Response(data)
+
+
+# ========================
+# DOCUMENT ENDPOINTS
+# ========================
+
+class DocumentViewSet(viewsets.ModelViewSet):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+
+    def create(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"detail": "No file provided"}, status=400)
+        data = {
+            'id': str(uuid.uuid4())[:128],
+            'name': request.data.get('name', file.name),
+            'file': file,
+            'file_type': file.content_type or '',
+            'file_size': file.size,
+            'category': request.data.get('category', 'other'),
+        }
+        user = _resolve_user_from_request(request)
+        if user:
+            data['uploaded_by'] = user.uid
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        doc = self.get_object()
+        from django.http import FileResponse
+        try:
+            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.name)
+        except Exception:
+            return Response({"detail": "File not found"}, status=404)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        category = self.request.query_params.get('category')
+        search = self.request.query_params.get('search')
+        if category:
+            qs = qs.filter(category=category)
+        if search:
+            qs = qs.filter(name__icontains=search)
+        return qs
 
 
 # ========================

@@ -167,6 +167,19 @@ class ApiService {
   // ========================
   healthCheck = () => this.api.get('/health/', { timeout: 5000 });
   getInfo = () => this.api.get('/v1/info/');
+
+  // ========================
+  // DOCUMENTS
+  // ========================
+  documents = {
+    getAll: (params) => this.api.get('/v1/documents/', { params }),
+    upload: (formData) => this.api.post('/v1/documents/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    }),
+    delete: (id) => this.api.delete(`/v1/documents/${id}/`),
+    download: (id) => `${BASE_URL}/v1/documents/${id}/download/?token=${localStorage.getItem('rms_access_token') || ''}`,
+  };
 }
 
 export default new ApiService();
