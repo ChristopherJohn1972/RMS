@@ -143,12 +143,7 @@ export default {
       }
     },
   },
-  plugins: [
-    require('@tailwindcss/forms')({
-      strategy: 'class',
-    }),
-    require('@tailwindcss/typography'),
-  ],
+  plugins: [],
   // Dark mode configuration
   darkMode: 'class',
   // Important selector for overriding other styles if needed
