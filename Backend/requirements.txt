@@ -1,0 +1,15 @@
+# requirements.txt - Django Backend for Rental Management System
+Django==5.1.3
+djangorestframework==3.15.2
+django-cors-headers==4.6.0
+python-dotenv==1.0.0
+
+# MySQL
+mysqlclient==2.2.6
+
+# Auth (optional, for Firebase token verification)
+firebase-admin==6.2.0
+
+# Production
+gunicorn==21.2.0
+whitenoise==6.7.0
