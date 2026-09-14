@@ -17,7 +17,7 @@ const DocumentsPage = () => {
   const loadDocuments = async () => {
     try {
       const res = await api.documents.getAll();
-      setDocuments(res.data || []);
+      setDocuments(Array.isArray(res) ? res : res.results || []);
     } catch {} finally { setLoading(false); }
   };
 
@@ -53,9 +53,22 @@ const DocumentsPage = () => {
 
   const handleDownload = async (doc) => {
     try {
-      const url = api.documents.download(doc.id);
-      window.open(url, '_blank');
-      toast.success(`Downloading ${doc.name}`);
+      const token = localStorage.getItem('rms_access_token');
+      const base = import.meta.env.VITE_API_URL || 'https://rental-management-api.onrender.com/api';
+      const response = await fetch(`${base}/v1/documents/${doc.id}/download/`, {
+        headers: { Authorization: `Token ${token}` },
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${doc.name}`);
     } catch (err) {
       toast.error('Unable to download document. Please try again.');
     }

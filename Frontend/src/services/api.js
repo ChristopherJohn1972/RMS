@@ -16,6 +16,9 @@ class ApiService {
         if (token) {
           config.headers.Authorization = `Token ${token}`;
         }
+        if (config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
+        }
         return config;
       },
       (error) => Promise.reject(error)
