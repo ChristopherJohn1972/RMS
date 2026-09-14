@@ -41,3 +41,8 @@ build cmd.txt
 deploy.sh
 cleanup.ps1
 ServiceAccountKey.json
+
+# Sensitive
+Backend/serviceAccountKey.json
+Backend/.env
+Backend/db.sqlite3
